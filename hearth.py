@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from os.path import expanduser
 import configparser
 import argparse
@@ -43,16 +45,16 @@ def parse_github_link(link):
     proj_name = git_user + "_" + git_parts[-1].strip(".git") + "/"
     return proj_name
 
-def download_repo(repo, proj_home):
+def download_repo(repo, target_dir):
     reset = True
-    if os.path.isdir(proj_home):
+    if os.path.isdir(target_dir):
         reset = input('Directory exists, redownload? (y/n):  ')
         if reset.lower() == "y":
-            shutil.rmtree(proj_home)
+            shutil.rmtree(target_dir)
         else:
             reset = False
     if reset:
-        git_cmd = "git clone {} {}".format(repo, proj_home)
+        git_cmd = "git clone {} {}".format(repo, target_dir)
         p = subprocess.Popen(git_cmd, shell=True)
         p.wait()
 
@@ -84,6 +86,18 @@ def delete_all(files, path=None):
         else:
             os.remove(loc)
 
+def install_pathogen_packages(proj_home):
+    loc = proj_home + ".vim/bundle/"
+    pack_loc = loc + "packages"
+
+    if os.path.isfile(pack_loc):
+        with open(pack_loc, 'r') as f:
+            packs = [line.strip() for line in f]
+        for pack in packs:
+            pack_name = parse_github_link(pack)
+            pack_dir = loc + pack_name
+            download_repo(pack, pack_dir)
+
 def main():
     args = get_args()
     config = get_config('hearth.cfg')
@@ -106,6 +120,8 @@ def main():
     if old_proj:
         dotfiles = get_dotfiles(old_proj, ignores)
         delete_all(dotfiles, home)
+
+    install_pathogen_packages(proj_home)
 
     dotfiles = get_dotfiles(proj_home, ignores)
     for f in dotfiles:
